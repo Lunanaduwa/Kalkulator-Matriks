@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Kalkulator Matriks Web</title>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.11.1/brython.min.js"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background-color: #ffe6f0; 
+            color: #4a003d;
+        }
+        h2, h3 { color: #b30059; }
+        input { 
+            width: 60px; 
+            text-align: center; 
+            border: 1px solid #ff99cc; 
+            border-radius: 5px; 
+            padding: 5px;
+        }
+        table { 
+            border-collapse: collapse; 
+            margin: 10px 0; 
+        }
+        td { padding: 5px; }
+        button { 
+            margin-top: 10px; 
+            padding: 5px 10px; 
+            background-color: #ff66a3; 
+            border: none; 
+            color: white; 
+            border-radius: 5px; 
+            cursor: pointer;
+        }
+        button:hover { background-color: #e60073; }
+        select { 
+            padding: 5px; 
+            border-radius: 5px; 
+            border: 1px solid #ff99cc;
+        }
+        .result { 
+            margin-top: 20px; 
+            font-weight: bold; 
+            background-color: #ffd6eb; 
+            padding: 10px; 
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body onload="brython()">
+
+<h2>Kalkulator Matriks</h2>
+
+<label>Pilih Operasi:</label>
+<select id="operation">
+    <option value="add">Penjumlahan</option>
+    <option value="sub">Pengurangan</option>
+    <option value="mul">Perkalian</option>
+    <option value="trans">Transpos</option>
+    <option value="det">Determinan</option>
+</select>
+
+<h3>Matriks A</h3>
+<label>Baris: <input type="number" id="rowsA" value="2" min="1"></label>
+<label>Kolom: <input type="number" id="colsA" value="2" min="1"></label>
+<button id="generateA">Buat Matriks A</button>
+<div id="matrixA"></div>
+
+<h3>Matriks B</h3>
+<label>Baris: <input type="number" id="rowsB" value="2" min="1"></label>
+<label>Kolom: <input type="number" id="colsB" value="2" min="1"></label>
+<button id="generateB">Buat Matriks B</button>
+<div id="matrixB"></div>
+
+<br>
+<button id="calculate">Hitung</button>
+
+<div class="result">
+    <h3>Hasil:</h3>
+    <div id="output"></div>
+</div>
+
+<script type="text/python">
+from browser import document, html
+
+def generate_matrix(rows, cols, container_id):
+    container = document[container_id]
+    container.clear()
+    table = html.TABLE()
+    for i in range(rows):
+        tr = html.TR()
+        for j in range(cols):
+            inp = html.INPUT(type="number", value="0")
+            tr <= html.TD(inp)
+        table <= tr
+    container <= table
+
+def get_matrix(container_id):
+    container = document[container_id]
+    rows = []
+    for tr in container.select("tr"):
+        row = []
+        for td in tr.select("td"):
+            val = float(td.select("input")[0].value)
+            row.append(val)
+        rows.append(row)
+    return rows
+
+def print_matrix(matrix):
+    table = html.TABLE(border="1")
+    for row in matrix:
+        tr = html.TR()
+        for val in row:
+            tr <= html.TD(str(round(val, 2)))
+        table <= tr
+    return table
+
+def add_matrices(a, b, subtract=False):
+    result = []
+    for i in range(len(a)):
+        row = []
+        for j in range(len(a[0])):
+            val = a[i][j] - b[i][j] if subtract else a[i][j] + b[i][j]
+            row.append(val)
+        result.append(row)
+    return result
+
+def multiply_matrices(a, b):
+    result = []
+    for i in range(len(a)):
+        row = []
+        for j in range(len(b[0])):
+            val = sum(a[i][k] * b[k][j] for k in range(len(b)))
+            row.append(val)
+        result.append(row)
+    return result
+
+def transpose_matrix(matrix):
+    return [[matrix[j][i] for j in range(len(matrix))] for i in range(len(matrix[0]))]
+
+def determinant(matrix):
+    # Determinan hanya untuk matriks persegi
+    if len(matrix) != len(matrix[0]):
+        return None
+    n = len(matrix)
+    if n == 1:
+        return matrix[0][0]
+    if n == 2:
+        return matrix[0][0]*matrix[1][1] - matrix[0][1]*matrix[1][0]
+    det = 0
+    for c in range(n):
+        submatrix = [row[:c] + row[c+1:] for row in matrix[1:]]
+        det += ((-1)**c) * matrix[0][c] * determinant(submatrix)
+    return det
+
+def calculate(ev):
+    op = document["operation"].value
+    A = get_matrix("matrixA")
+    output = document["output"]
+    output.clear()
+
+    if op in ["add", "sub", "mul"]:
+        B = get_matrix("matrixB")
+
+    if op == "add":
+        res = add_matrices(A, B)
+        output <= print_matrix(res)
+    elif op == "sub":
+        res = add_matrices(A, B, subtract=True)
+        output <= print_matrix(res)
+    elif op == "mul":
+        if len(A[0]) != len(B):
+            output <= html.P("Perkalian tidak valid! (Kolom A ≠ Baris B)")
+            return
+        res = multiply_matrices(A, B)
+        output <= print_matrix(res)
+    elif op == "trans":
+        res = transpose_matrix(A)
+        output <= print_matrix(res)
+    elif op == "det":
+        det_val = determinant(A)
+        if det_val is None:
+            output <= html.P("Determinan hanya bisa dihitung untuk matriks persegi!")
+        else:
+            output <= html.P(f"Determinan: {round(det_val, 2)}")
+    else:
+        output <= html.P("Operasi tidak valid!")
+
+document["generateA"].bind("click", lambda ev: generate_matrix(int(document["rowsA"].value), int(document["colsA"].value), "matrixA"))
+document["generateB"].bind("click", lambda ev: generate_matrix(int(document["rowsB"].value), int(document["colsB"].value), "matrixB"))
+document["calculate"].bind("click", calculate)
+
+# Buat matriks awal
+generate_matrix(2, 2, "matrixA")
+generate_matrix(2, 2, "matrixB")
+</script>
+
+</body>
+</html>
